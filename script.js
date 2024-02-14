@@ -1,99 +1,78 @@
-function getWeather() {
-    const apiKey = 'b38239aa674fdd0078002fc0bb6c027a';
-    const city = document.getElementById('city').value;
+const apiKey = '8d6454a89dff871786a0307b0dbebbee'
+async function fetchWeatherData(city) {
+    try {
+        const response = await fetch(
+            `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${apiKey}`
+        );
 
-    if (!city) {
-        alert('Please enter a city');
-        return;
-    }
-
-    const currentWeatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}`;
-    const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}`;
-
-    fetch(currentWeatherUrl)
-        .then(response => response.json())
-        .then(data => {
-            displayWeather(data);
-        })
-        .catch(error => {
-            console.error('Error fetching current weather data:', error);
-            alert('Error fetching current weather data. Please try again.');
-        });
-
-    fetch(forecastUrl)
-        .then(response => response.json())
-        .then(data => {
-            displayHourlyForecast(data.list);
-        })
-        .catch(error => {
-            console.error('Error fetching hourly forecast data:', error);
-            alert('Error fetching hourly forecast data. Please try again.');
-        });
-}
-
-function displayWeather(data) {
-    const tempDivInfo = document.getElementById('temp-div');
-    const weatherInfoDiv = document.getElementById('weather-info');
-    const weatherIcon = document.getElementById('weather-icon');
-    const hourlyForecastDiv = document.getElementById('hourly-forecast');
-
-    // Clear previous content
-    weatherInfoDiv.innerHTML = '';
-    hourlyForecastDiv.innerHTML = '';
-    tempDivInfo.innerHTML = '';
-
-    if (data.cod === '404') {
-        weatherInfoDiv.innerHTML = `<p>${data.message}</p>`;
-    } else {
-        const cityName = data.name;
-        const temperature = Math.round(data.main.temp - 273.15); // Convert to Celsius
-        const description = data.weather[0].description;
-        const iconCode = data.weather[0].icon;
-        const iconUrl = `https://openweathermap.org/img/wn/${iconCode}@4x.png`;
-
-        const temperatureHTML = `
-            <p>${temperature}°C</p>
-        `;
-
-        const weatherHtml = `
-            <p>${cityName}</p>
-            <p>${description}</p>
-        `;
-
-        tempDivInfo.innerHTML = temperatureHTML;
-        weatherInfoDiv.innerHTML = weatherHtml;
-        weatherIcon.src = iconUrl;
-        weatherIcon.alt = description;
-
-        showImage();
+        if (!response.ok) {
+            throw new Error("Unable to fetch weather data");
+        }
+        const data = await response.json();
+        console.log(data);
+        // console.log(data.main.temp);
+        // console.log(data.name);
+        // console.log(data.wind.speed);
+        // console.log(data.main.humidity);
+        // console.log(data.visibility);
+        updateWeatherUI(data);
+    } catch (error) {
+        console.error(error);
     }
 }
 
-function displayHourlyForecast(hourlyData) {
-    const hourlyForecastDiv = document.getElementById('hourly-forecast');
+const cityElement = document.querySelector(".city");
+const temperature = document.querySelector(".temp");
+const windSpeed = document.querySelector(".wind-speed");
+const humidity = document.querySelector(".humidity");
+const visibility = document.querySelector(".visibility-distance");
 
-    const next24Hours = hourlyData.slice(0, 8); // Display the next 24 hours (3-hour intervals)
+const descriptionText = document.querySelector(".description-text");
+const date = document.querySelector(".date");
+const descriptionIcon = document.querySelector(".description i");
 
-    next24Hours.forEach(item => {
-        const dateTime = new Date(item.dt * 1000); // Convert timestamp to milliseconds
-        const hour = dateTime.getHours();
-        const temperature = Math.round(item.main.temp - 273.15); // Convert to Celsius
-        const iconCode = item.weather[0].icon;
-        const iconUrl = `https://openweathermap.org/img/wn/${iconCode}.png`;
+// fetchWeatherData();
 
-        const hourlyItemHtml = `
-            <div class="hourly-item">
-                <span>${hour}:00</span>
-                <img src="${iconUrl}" alt="Hourly Weather Icon">
-                <span>${temperature}°C</span>
-            </div>
-        `;
+function updateWeatherUI(data) {
+    cityElement.textContent = data.name;
+    temperature.textContent = `${Math.round(data.main.temp)}`;
+    windSpeed.textContent = `${data.wind.speed} km/h`;
+    humidity.textContent = `${data.main.humidity}%`;
+    visibility.textContent = `${data.visibility / 1000} km`;
+    descriptionText.textContent = data.weather[0].description;
 
-        hourlyForecastDiv.innerHTML += hourlyItemHtml;
-    });
+    const currentDate = new Date();
+    date.textContent = currentDate.toDateString();
+    const weatherIconName = getWeatherIconName(data.weather[0].main);
+    descriptionIcon.innerHTML = `<i class="material-icons">${weatherIconName}</i>`;
 }
 
-function showImage() {
-    const weatherIcon = document.getElementById('weather-icon');
-    weatherIcon.style.display = 'block'; // Make the image visible once it's loaded
+const formElement = document.querySelector(".search-form");
+const inputElement = document.querySelector(".city-input");
+
+formElement.addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const city = inputElement.value;
+    if (city !== "") {
+        fetchWeatherData(city);
+        inputElement.value = "";
+    }
+});
+
+function getWeatherIconName(weatherCondition) {
+    const iconMap = {
+        Clear: "wb_sunny",
+        Clouds: "wb_cloudy",
+        Rain: "umbrella",
+        Thunderstorm: "flash_on",
+        Drizzle: "grain",
+        Snow: "ac_unit",
+        Mist: "cloud",
+        Smoke: "cloud",
+        Haze: "cloud",
+        Fog: "cloud",
+    };
+
+    return iconMap[weatherCondition] || "help";
 }
